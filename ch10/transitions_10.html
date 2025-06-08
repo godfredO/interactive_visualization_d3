@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script type="text/javascript" src="../d3.js"></script>
+        <title>Updates</title>
+        <style type="text/css">
+            rect:hover {
+				fill: orange;
+            }
+            #tooltip {
+                position: absolute;
+                width : 200px;
+                height : auto;
+                padding : 10px;
+                background-color : white;
+                -webkit-border-radius : 10px;
+                -moz-border-radius: 10px;
+                -border-radius : 10px;
+                -webkit-box-shadow: 4px 4px 10px rgba(0,0,0,0.4);
+                -moz-box-shadow: 4px 4px 10px rgba(0,0,0,0.4);
+                box-shadow: 4px 4px 10px rgba(0,0,0,0.4);
+                pointer-events: none;
+            }
+            #tooltip.hidden {
+                display: none;
+            }
+            #tooltip p {
+                margin : 0;
+                font-family : sans-serif;
+                font-size : 16px;
+                line-height : 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="tooltip" class="hidden">
+            <p><strong>Important Label Heading</strong></p>
+            <p><span id="value">100</span>%</p>
+        </div>
+        <script type="text/javascript">
+            var w = 600;
+            var h = 250;
+
+            var dataset = [5,10,13,19,21,25,22,18,15,13,11,12,15,20,18,17,16,18,23,25];
+
+
+            // Scale definitions
+            var xScale = d3.scaleBand() // divides output range into discrete bands of equal width and padding
+                            .domain(d3.range(dataset.length)) // d3 has a range() function snap! start, stop, step
+                            .rangeRound([0,w]) // output range rounds each number to nearest integer
+                            .paddingInner(0.05); // 0-1; specifies fraction of range used by blank space. 0-sidebyside
+            
+            var yScale = d3.scaleLinear()
+                            .domain([0, d3.max(dataset)])
+                            .range([0,h])
+
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h)
+
+            // generate bars and encode data in height and colors
+            svg.selectAll("rect")
+                .data(dataset)
+                .enter()
+                .append("rect")
+                .attr("x", function(d,i){
+                    return xScale(i);
+                })
+                .attr("y", function(d){
+                    return h - yScale(d);
+                })
+                .attr("width", function(d,i){
+                    return xScale.bandwidth(); // the width of each band in d3.scaleBand()
+                })
+                .attr("height", function(d){
+                    return yScale(d);
+                })
+                .attr("fill", function(d){
+                    
+                    return "rgb(0,0, " + Math.round(d*10) + ")";
+                })
+                .on("mouseover", function(d){
+
+                    // Get this bar's x/y values, then augment for the tooltip
+                    var xPosition = parseFloat(d3.select(this).attr("x")) + xScale.bandwidth()/2; // x val is a string convert and center
+                    var yPosition = parseFloat(d3.select(this).attr("y"))/2 + h/2;
+
+                    // Update the tooltip position and value
+                    d3.select("#tooltip")
+                        .style("left", xPosition + "px")
+                        .style("top", yPosition + "px")
+                        .select("#value")
+                        .text(d);
+                    
+                    // Show the tooltip
+                    d3.select("#tooltip").classed("hidden", false);
+
+                }) // works in conjunction with the orange style on hover to display bar value as black svg tooltip
+                .on("mouseout", function(){
+                   
+                   // Remove the tooltip created in mouseover
+                   d3.select("#tooltip").classed("hidden", true);
+                })
+                .on("click", function(){
+                    sortBars();
+                }); 
+            
+            
+
+            var sortOrder = false; // Boolean to determine if bars are sorted in ascending or descending order
+
+
+            // Define sort bars
+            var sortBars = function(){
+                sortOrder = !sortOrder; // Flip switch, once only here , don't flip in sortLabels()
+                svg.selectAll("rect")  // d3 select all rects in svg tag in DOM, rects selection references
+                    .sort(function(a,b){ // JavaScript's native sort() method.
+                        if (sortOrder) {
+                        return d3.ascending(a,b);} else {
+                            return d3.descending(a,b);}
+                            })
+                    .transition("sortBars")
+                    .delay(function(d,i){
+                        return i*50; // per-element delay
+                    })
+                    .duration(1000)
+                    .ease(d3.easeCircleIn)
+                    .attr("x", function(d,i){
+                        return xScale(i);
+                    });
+            };  
+
+            
+        </script>
+    </body>
+
+
+
+
+</html>

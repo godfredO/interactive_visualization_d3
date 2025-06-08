@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script type="text/javascript" src="../d3.js"></script>
+        <title>Updates</title>
+    </head>
+    <body>
+        <p>Click on this text to remove a data value from the chart</p>
+        <script type="text/javascript">
+            var w = 600;
+            var h = 250;
+
+            var dataset = [5,10,13,19,21,25,22,18,15,13,
+                            11,12,15,20,18,17,16,18,23,25];
+
+            var maxValue = d3.max(dataset);
+
+
+            // Scale definitions
+            var xScale = d3.scaleBand() // divides output range into discrete bands of equal width and padding
+                            .domain(d3.range(dataset.length)) // d3 has a range() function snap! start, stop, step
+                            .range([0,w]) // use rangeRound() to round to nearest integer pixel for antialiasing
+                            
+                            .paddingInner(0.05); // 0-1; specifies fraction of range used by blank space. 0-sidebyside
+            
+            var yScale = d3.scaleLinear()
+                            .domain([0, d3.max(dataset)])
+                            .range([0,h])
+
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h)
+
+            // generate bars and encode data in height and colors
+            svg.selectAll("rect")
+                .data(dataset)
+                .enter()
+                .append("rect")
+                .attr("x", function(d,i){
+                    return xScale(i);
+                })
+                .attr("y", function(d){
+                    return h - yScale(d);
+                })
+                .attr("width", function(d,i){
+                    return xScale.bandwidth(); // the width of each band in d3.scaleBand()
+                })
+                .attr("height", function(d){
+                    return yScale(d);
+                })
+                .attr("fill", function(d){
+                    
+                    return "rgb(0,0, " + Math.round(d*10) + ")";
+                });
+            
+            // value labels
+            svg.selectAll("text")
+                .data(dataset)
+                .enter()
+                .append("text")
+                .text(function(d){
+                    return d; // the actual text between the tags <text>text</text>
+                })
+                .attr("x", function(d,i){
+                    return xScale(i) + xScale.bandwidth()/2; // move near center of bar
+                })
+                .attr("y", function(d){
+                    return h - yScale(d) + 14; // move inside top of bar (topleft is 00)
+                })
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "11px")
+                .attr("fill", "white")
+                .attr("text-anchor", "middle"); // center text horizontally at the assigned x value
+                
+
+            // Update Code
+            d3.select("p")
+                .on("click", function(){
+
+                       
+                    // Remove first value from the dataset
+                    dataset.shift();  // shift() removes the first elment from an array.
+                    
+                    /*
+                    // Remove last value from the dataset
+                    dataset.pop(); 
+                    */
+
+                    // Update the scale domain
+                    xScale.domain(d3.range(dataset.length)); // recalibrate x scale by updating domain
+                    yScale.domain([0, d3.max(dataset)]); // recalibrate y scale; there might be new max
+
+                    // Select 
+                    var bars = svg.selectAll("rect")
+                                    .data(dataset) // bind the updated dataset, returns update selections
+                    
+                    bars.enter()   // get references to enter selections (placeholders, subset of update selections)
+                        .append("rect") // append rectangle to the placeholder selections
+                        .attr("x", function(d,i) {  // x of current selection (enter plus preexisting)
+                            return w;
+                        })
+                        .attr("y", function(d){ // y of current selection (enter plus preexisting)
+                            return h - yScale(d)})
+                        .merge(bars) // Merge the enter selection with remaining bars, into current selection
+                        .transition()   // interpolate the changes below
+                        .duration(500)  // let interpolation stretch out for 500 milliseconds
+                        .attr("x", function(d,i) {  // x of current selection (enter plus preexisting)
+                            return xScale(i);
+                        })
+                        .attr("y", function(d){ // y of current selection (enter plus preexisting)
+                            return h - yScale(d);
+                        })
+                        .attr("width", xScale.bandwidth())
+                        .attr("height", function(d) {
+                            return yScale(d); // replot all bars because changed sa
+                        })
+                        .attr("fill", function(d){
+                            return "rgb(0,0, " + Math.round(d*10) + ")";
+                        });
+                         
+
+                    // labels
+                    labels = svg.selectAll("text")
+                                .data(dataset)      // update selection
+
+                    labels.enter()                  // enter selection , placeholders
+                            .append("text")         // append text elements for new enter selection
+                            .attr("x", function(d,i){
+                                return w;
+                            })
+                            .attr("y", function(d){
+                            if (d > 0.1 * maxValue){
+                            return h - yScale(d) + 14} else{
+                                return h - yScale(d) - 1
+                            }
+                             })
+                            .attr("font-family", "sans-serif")
+                            .attr("font-size", "11px")
+                            .attr("text-anchor", "middle")
+                            .merge(labels)          // merge current selection and enter selection
+                            .transition()
+                            .duration(500)
+                            .text(function(d){
+                            return d;
+                            })
+                            
+                            .attr("x", function(d,i){
+                                return xScale(i) + xScale.bandwidth()/2;
+                            })
+                            .attr("y", function(d){
+                            if (d > 0.1 * maxValue){
+                            return h - yScale(d) + 14} else{
+                                return h - yScale(d) - 1
+                            }
+                            })
+                            .attr("fill", function(d){
+                                if (d > 0.1 * maxValue) {
+                                    return "white";
+                                } else {
+                                    return "black";
+                                }
+                            });
+                        
+                        // Exit selections bars
+                        bars.exit() // grab references to exit selection
+                            .transition()
+                            .duration(500)
+                            .attr("x", w) // transition exiting element off to the right side
+                            .remove(); // remove exiting element
+                        
+                        // Exit selections text
+                        labels.exit()
+                                .transition()
+                                .duration(500)
+                                .attr("x", w)
+                                .remove();
+                        
+                        });
+                    
+    
+        </script>
+    </body>
+
+
+
+
+</html>

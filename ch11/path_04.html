@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset='utf-8'>
+    <title>paths</title>
+    <script type="text/javascript" src='../d3.js'></script>
+    <style type="text/css">
+
+        .line {
+            fill : none;        /* a line has no fill but a stroke*/
+            stroke : teal;
+            stroke-width: 0.5;
+        }
+
+        .area {
+            fill : teal;    /* an area does have fill but no stroke */
+            stroke : none; 
+        }
+
+        .safeLevel {
+            stroke : red;
+            stroke-dasharray : 2,3;
+        }
+
+        .danger {
+            fill: red;  /* since this is an area chart we specify a fill instead of stroke*/
+        }
+
+        .dangerLabel {
+            font-family : Helvetica, sans-serif;
+            font-size : 12px;
+            fill : red;
+        }
+    
+    </style>
+</head>
+<body>
+
+    <script type="text/javascript">
+
+        // SVG Dimensions
+        var w = 800;            // width
+        var h = 300;            // height
+        var padding = 40;       // padding
+
+        var dataset, xScale, yScale, xAxis, yAxis, line;  // Global variables, empty, data need first
+     
+        var rowConverter = function(d){
+            return {
+                // Make a new Date object for each year + month
+                date : new Date(+d.year, (+d.month - 1)),
+                // Convert from string to float
+                average : parseFloat(d.average)
+            };
+        };
+
+        var formatTime = d3.timeFormat("%Y")
+        
+        d3.csv("mauna_loa_co2_monthly_averages.csv", rowConverter, function(data){
+            
+            dataset = data ; // Update the global variable with the converted data
+
+            // Print data to console as table, for verification
+            // console.table(dataset, ["date", "average"]);
+
+            xScale = d3.scaleTime()
+                        .domain([ // domain spans from the minimum date to the maximum date
+                                d3.min(dataset, function(d) { return d.date;}),
+                                d3.max(dataset, function(d) { return d.date;})
+                                ])
+                        .range([padding, w]); 
+            
+            yScale = d3.scaleLinear()
+                        .domain([ // remove 0 baseline, find the min of the valid data and subtract 10
+                        d3.min(dataset, function(d){if (d.average >= 0) return d.average}) -10, 
+                        d3.max(dataset, function(d) { return d.average;})]) 
+                        .range([h-padding,0]) // pixels
+            
+           
+
+            // Create the axis
+            xAxis = d3.axisBottom()
+                        .scale(xScale)
+                        .ticks(10)
+                        .tickFormat(formatTime);
+
+
+            yAxis = d3.axisLeft()
+                        .scale(yScale)
+                        .ticks(10);
+
+            // Create SVG element
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h);        
+                            
+            // Emphasize points above and below safelevel
+            area  = d3.area()
+                        .defined(function(d) { return d.average >=0}) // we overlay the danger over this area
+                        .x(function(d){ return xScale(d.date);})
+                        .y0(function() {return yScale.range()[0];})
+                        .y1(function(d) { return yScale(d.average);})
+                          
+            dangerArea  = d3.area()
+                        .defined(function(d) { return d.average >= 350})
+                        .x(function(d){ return xScale(d.date);})
+                        .y0(function() {return yScale(350)}) // minimum line of the area enclosure
+                        .y1(function(d) { return yScale(d.average);})
+                          
+            
+            // Create area
+            svg.append("path")
+                .datum(dataset)  // bind entire dataset to the path using datum() since there is only one line
+                .attr("class", "area")  // class attribute for CSS styling
+                .attr("d", area); // d contains a series of path commands provided by path generator here
+
+            
+            svg.append("path")
+                .datum(dataset)  // bind entire dataset to the path using datum() since there is only one line
+                .attr("class", "area danger")  // class attribute for CSS styling
+                .attr("d", dangerArea); // d contains a series of path commands provided by path generator here
+            
+            
+            
+            
+
+            // Define the axis groups
+            svg.append("g")                 // add a group object
+                .attr("class", "axis")      // assing a class for CSS styling and selection
+                .attr("transform", "translate(0," + (h-padding)+")") // translate from 0 to h-padding
+                .call(xAxis);   // call xAxis function and populate group with line, text, ticks and text it returns
+
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + padding + ",0)") // translate(padding,0)
+                .call(yAxis);
+
+            // Define 350ppm max safe level line
+            svg.append("line")  // line tag 
+                .attr("class", "line safeLevel")
+                .attr("x1", padding)
+                .attr("x2", w)
+                .attr("y1", yScale(350))
+                .attr("y2", yScale(350))
+            
+            svg.append("text")
+                .text('350 ppm "safe" level' )
+                .attr("x", padding + 20)
+                .attr("y", yScale(350) - 7) // -7 because everything is upside down
+                .attr("class", "dangerLabel")
+
+            
+
+
+
+        })
+
+        
+
+        </script>
+</body>
+</html>

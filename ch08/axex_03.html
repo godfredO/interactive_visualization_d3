@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>scales_01</title>
+        <script type="text/javascript" src="../d3.js"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+        var w = 500;
+        var h = 300;
+        var padding = 20;
+
+        var dataset, xScale, yScale ; // Empty global variables
+
+        // Named function for converting strings to dates, like  strptime()
+        var parseTime = d3.timeParse("%m/%d/%y"); // initialize with expected date format
+
+        // Named function for converting dates to strings, like strftime()
+        var formatTime = d3.timeFormat("%b %e"); // initialize with expected date format
+
+
+        // rowConverter
+        var rowConverter = function(d){
+            return {
+                Date : parseTime(d.Date), // named function above which uses d3.timeParse()
+                Amount : parseInt(d.Amount) // in-built function, convert amount to integer from string
+
+            }};
+
+        
+        // Load in the data
+        d3.csv("../ch07/time_scale_data.csv", rowConverter, function(data){ 
+            
+            // Assign read and converted data to dataset global variable
+            dataset = data;             // data read as list of dicts of Date,Amount keys
+
+            // Use the read data to create scale function domain via d3.min() and d3.max()
+            xScale = d3.scaleTime()
+                        .domain([
+                        d3.min(dataset, function(d){return d.Date;}), // d3.min() works on dates also
+                        d3.max(dataset, function(d){return d.Date;})]) // xScale from minDate to maxDate
+                        .range([padding, w-padding]); // pixel range
+            
+            yScale = d3.scaleLinear()
+                        .domain([
+                        d3.min(dataset, function(d){return d.Amount;}), // yScale from minAmount to maxAmount
+                        d3.max(dataset, function(d){return d.Amount})])
+                        .range([h-padding, padding]); // invert since y 0 is top left not bottom left
+            
+            
+            // Create svg element
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h);
+            
+            // Generate date labels first so they are in the back
+            svg.selectAll("text") // svg is a reference returned by d3
+                .data(dataset)
+                .enter()
+                .append("text")
+                .text(function(d){
+                    return formatTime(d.Date);
+                })
+                .attr("x", function(d){
+                    return xScale(d.Date) + 4;
+                })
+                .attr("y", function(d){
+                    return yScale(d.Amount) + 4;
+                })
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "11px")
+                .attr("fill", "#bbb");
+            
+            // Generate circles last, so they appear in front
+            svg.selectAll("circle")
+                .data(dataset)
+                .enter()
+                .append("circle")
+                .attr("cx", function(d){
+                    return xScale(d.Date);
+                })
+                .attr("cy", function(d){
+                    return yScale(d.Amount);
+                })
+                .attr("r", 2);
+            
+            // Define axes and add to translated group element
+            var xAxis = d3.axisBottom().scale(xScale).ticks(5);
+
+            var yAxis = d3.axisLeft().scale(yScale).ticks(5);
+
+            svg.append("g")
+                .attr("class", "axis") // assign axis class
+                .attr("transform", "translate(0," + (h-padding)+")") // transform=translate(0,h-padding)
+                .call(xAxis); 
+
+            svg.append("g")  // start with group element
+                .attr("class", "axis") // assign axis class
+                .attr("transform", "translate(" + padding + "," + "0)") // translate to (0, padding)
+                .call(yAxis);
+        })
+        
+        
+        
+
+        </script>
+    
+    </body>
+
+</html>

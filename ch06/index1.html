@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>D3 Page</title>
+    <script type="text/javascript" src="../d3.js"></script>
+    <style type="text/css">
+
+        div.bar {
+            display: inline-block;
+            width: 20px;
+            height: 75px; 
+            background-color: teal;
+            margin-right: 2px; // add some space to the right of each bar
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/javascript">
+
+        var dataset = [5,10,15,20,25];
+        // var dataset = [25,7,5,26,11, 8,25,14,23,19,14,11,22,29,11,13,12,17,18,10,24,18,25,9,3];
+        /*
+        var dataset = [];           // empty array 
+        for (var i=0; i<25; i++){ // for loop executed 25 times
+            var newNumber = Math.round(Math.random()*30); // Math.random() random nums between 0 up to (not include) 1.0
+            dataset.push(newNumber);  // push() is python's append().
+        }*/
+
+        /*
+        d3.select("body").selectAll("div")  // we will use divs to draw our bars
+            .data(dataset)
+            .enter()   // enter loop
+            .append("div")
+            .attr("class", "bar") // set class="bar" on div selection
+            .style("height", function(d){
+                var barHeight = d * 5;  // Scale up by a factor of 5
+                return barHeight + "px"; // string of dpx
+            })
+        */
+
+        /*
+        var svg = d3.select("body").append("svg"); // we first append svg "canvas" tag to body tag; store reference
+        svg.attr("width", 500)
+        .attr("height", 50)
+        */
+
+        //Width and height
+        var w = 500;
+        var h = 50;
+
+        var svg = d3.select("body")
+                .append("svg")
+                .attr("height", h)
+                .attr("weight", w);
+        
+        var circles = svg.selectAll("circle")
+            .data(dataset)
+            .enter()
+            .append("circle");
+        
+        circles.attr("cx", function(d, i){
+            return (i *50)+25; // push each circle further to the right
+        })
+        .attr("cy", h/2)        // all circle centers at the same height, vertical center of svg
+        .attr("r", function (d){
+            return d;           // radius corresponds to data value
+        })
+        .attr("fill", "yellow")
+        .attr("stroke", "orange")
+        .attr("stroke-width", function(d){
+            return d/2;
+        });
+
+        
+
+    </script>
+
+
+</body>
+
+</html>

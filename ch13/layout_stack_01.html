@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="text/javascript" src="../d3.js"></script>
+    </head>
+    <body>
+
+        <script type="text/javascript">
+
+            // Wdith and height of svg
+            var w = 500;
+            var h = 300;
+
+            // Original data
+            var dataset = [
+				{ apples: 5, oranges: 10, grapes: 22 },
+				{ apples: 4, oranges: 12, grapes: 28 },
+				{ apples: 2, oranges: 19, grapes: 32 },
+				{ apples: 7, oranges: 23, grapes: 35 },
+				{ apples: 23, oranges: 17, grapes: 43 }
+			];
+
+            // Initialize stack method
+            var stack = d3.stack()
+                            .keys(['apples', 'oranges', 'grapes']); // categories (from the columns)
+
+            // Stack the data
+            var series = stack(dataset); 
+
+            // Scales
+            xScale = d3.scaleBand() // x-axis represents categorical data so scaleBand()
+                        .domain(d3.range(dataset.length)) // a band for each object in dataset
+                        .range([0,w])
+                        .paddingInner(0.05);
+            
+            yScale = d3.scaleLinear()
+                        .domain([
+                        0, d3.max(dataset, function(d) {
+                            return d.apples + d.oranges + d.grapes })]
+                            ) // object with highest number of fruits
+                        .range([0,h])
+
+
+            // Categorical colors as range of ordinal scale
+            var colors = d3.scaleOrdinal(d3.schemeCategory10);
+
+
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h);
+            
+            // Add a group for each row of data
+            var groups = svg.selectAll("g")
+                            .data(series) // the stack-ified data is bound to a group (series per key)
+                            .enter()
+                            .append("g")
+                            .style("fill", function(d,i){
+                                return colors(i); // series i has one key's values eg orange so same color
+                            }); // we would have three groups with their data: orange, grapes, apple groups
+            
+            // Add a rect for each data value
+            var rects = groups.selectAll("rect")  // for each group plot the rects from baseline to topline
+                                .data(function(d) { return d;}) // for each group bind the data inside the group
+                                .enter()
+                                .append("rect") // for each group append a rect for each value within the group
+                                .attr("x", function(d,i){
+                                    return xScale(i); // same index of different groups are same original object
+                                })
+                                .attr("y", function(d) {
+                                    return yScale(d[0]); // scaled baseline
+                                })
+                                .attr("height", function(d) {
+                                    return yScale(d[1]) - yScale(d[0]); // (scaled) topline - baseline
+                                })
+                                .attr("width", xScale.bandwidth()) // fixed width of categorical data
+
+        </script>
+
+    </body>
+
+</html>

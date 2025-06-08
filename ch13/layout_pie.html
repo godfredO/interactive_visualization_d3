@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="text/javascript" src="../d3.js"></script>
+        <style type="text/css">
+
+            text {
+				font-family: sans-serif;
+				font-size: 12px;
+				fill: white;
+			}
+        
+        </style>
+    </head>
+    <body>
+        <script type="text/javascript">
+            
+            // Start with dataset
+            var dataset = [5,10,20,45,6,25];
+
+            // Default pie layout
+            var pie = d3.pie();  // generate start/end/pad angles
+
+            // Define Arc
+            var w = 300;    // width of arc
+            var h = 300;    // height of chart
+
+            var outerRadius = w / 2; // outer radius as half of the width
+            var innerRadius = w/3;
+
+            // Define path generator function 
+            var arc = d3.arc()
+                        .innerRadius(innerRadius)
+                        .outerRadius(outerRadius);
+            
+            // Categorical color scheme accessible via a one-to-one mapping
+            var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+            // SVG element
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h);
+
+            // Set up groups 
+            var arcs = svg.selectAll("g.arc") // group elements with class arc
+                            .data(pie(dataset))   // pie function generates angles from data before binding
+                            .enter()
+                            .append("g")
+                            .attr("class", "arc")
+                            .attr("transform", "translate(" + outerRadius + "," + outerRadius + ")");
+            
+            // Draw arc paths
+            arcs.append("path")  // path element to each group
+                .attr("fill", function(d,i){
+                    return color(i);
+                })
+                .attr("d", arc); // path generator as d attribute of path, values set of result of arc() function
+
+            // Text labels for each wedge:
+            arcs.append("text")
+                .attr("transform", function(d){
+                    return  "translate(" + arc.centroid(d) + ")"; // center point of an arc
+                }) // path genrator used here
+                .attr("text-anchor", "middle")
+                .text(function(d) {
+                    return d.value; // d.value because pie-fied data was bound to groups
+                }) 
+
+
+
+        </script>
+    </body>
+</html>

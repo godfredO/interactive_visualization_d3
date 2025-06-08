@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Stacked Layout Area</title>
+        <script type="text/javascript" src="../d3.js"></script>
+        <style type="text/css">
+
+            h1 {
+                font-family : Helvetica, sans-serif;
+                font-size : 14px;
+                font-weight : bold;
+            }
+
+            .area {
+                stroke :  none;
+            }
+
+            .area:hover {
+                fill : yellow; /* color of highlighting upon hover*/
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Monthly Number of Electric Vehicles Sold in the US: December 2010-June 2013</h1>
+        <script type="text/javascript">
+             
+            // Width and height of svg
+            var w = 800;
+            var h = 500;
+            var padding = 20;
+
+            var dataset, xScale, yScale, xAxis, yAxis, area, series; // global variables to be updated with csv read
+
+            // For converting strings to dates (parsing dates from strings)
+            var parseTime = d3.timeParse("%Y-%m")
+
+            // Function for converting dates to strings
+            var formatTime = d3.timeFormat("%b %Y")
+
+
+            // Function for converting rows into appropriate formats. There is a Date column
+            // and several other column with numbers sold by each car maker
+            var rowConverter = function(d,i,cols){ // wait cols=list of columns
+                 
+                // First parse out the date from the date column
+                var row = {
+                    date : parseTime(d.Date), // New date object for each year + month
+                };
+
+                // Next handle the other columns
+                // Loop once for each vehicle type
+                for (var i=1; i < cols.length; i++){ // skip col 0 - Date
+                    var col = cols[i]; // current column 
+
+                    // If the value exists... some are empty strings 0,,,
+                    if (d[col]) { 
+                        row[col] = +d[col]; // + is shortcut for parseInt()
+                    } else {
+                        row[col] = 0;// if an empty string its 0 cars sold
+                    }
+                }
+
+                return row; // all converted objects will be collected into an array
+            }
+
+
+            // Set up stack method
+            var stack = d3.stack()
+                            .order(d3.stackOrderDescending); // Category with largest total goes to bottom
+            
+
+            // Load in data
+            d3.csv("ev_sales_data.csv", rowConverter, function(data){
+
+                dataset = data;
+
+                var keys = dataset.columns;
+                keys.shift(); // Remove first column name ('Date'), leaving the car names
+                stack.keys(keys) // Assign car names as the keys (categories) for initialized stack
+
+                // Data, stacked
+                series = stack(dataset) // somehow having the date in the dataset doesnt affect stack
+
+                // Create scale functions
+                xScale = d3.scaleTime()
+                            .domain([
+                            d3.min(dataset, function(d){ return d.date;}),
+                            d3.max(dataset, function(d){ return d.date;})])
+                            .range([padding, w - padding*2]);
+                
+                yScale = d3.scaleLinear()
+                            .domain([
+                            0, // 0 baseline and we know some car makers sold nothing
+                            d3.max(dataset, function(d){ // 
+                                var sum = 0; // sales per year
+
+                                // Loops once for each row, to calculate the total sales per year
+                                for (var i=0; i < keys.length; i++){
+                                    carMaker = keys[i];
+                                    sum += d[carMaker];
+                                };
+                                return sum;
+                            })
+                            ])
+                            .range([h-padding, padding / 2])
+                            .nice(); // expands domain to both ends to nearest round value
+                
+                // Define axes
+                xAxis = d3.axisBottom()
+                            .scale(xScale)
+                            .ticks(10)
+                            .tickFormat(formatTime);
+                
+                yAxis = d3.axisRight()
+                            .scale(yScale)
+                            .ticks(5);
+                
+
+                // Define area generator
+                area = d3.area()
+                            .x(function(d) { return xScale(d.data.date)}) // series has top/baselines and actual data object
+                            .y0(function(d) { return yScale(d[0]);}) // baseline
+                            .y1(function(d) { return yScale(d[1]);}); // topline
+                
+
+                // Create SVG element
+                var svg = d3.select("body")
+                            .append("svg")
+                            .attr("width", w)
+                            .attr("height", h);
+                
+                // Create areas
+                svg.selectAll("path")
+                    .data(series)
+                    .enter()
+                    .append("path")
+                    .attr("class", "area")
+                    .attr("d", area) // generator function goes into the d attribute of path
+                    .attr("fill", function(d,i){
+                        return d3.schemeCategory20[i];
+                    })
+                    .append("title") // Make tooltip
+                    .text(function(d) {
+                        return d.key; // category of each series array is stored in a key property
+                    });
+                
+                // Create the axis
+                svg.append("g")
+                    .attr("class", "axis")
+                    .attr("transform", "translate(0," + (h-padding) + ")")
+                    .call(xAxis);
+                
+                svg.append("g")
+                    .attr("class", "axis")
+                    .attr("transform", "translate(" + (w - padding * 2) + ",0)")
+                    .call(yAxis);
+
+
+            })
+
+        </script>
+    </body>
+    
+</html>

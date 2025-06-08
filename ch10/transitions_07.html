@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script type="text/javascript" src="../d3.js"></script>
+        <title>Updates</title>
+        <style type="text/css">
+            rect:hover {
+                fill:orange; 
+            }
+            rect {
+                -webkit-transition: all 1s;
+                -moz-transition: all 1s;
+                -o-transition: all 1s;
+            }
+        </style>
+    </head>
+    <body>
+        <script type="text/javascript">
+            var w = 600;
+            var h = 250;
+
+            var dataset = [5,10,13,19,21,25,22,18,15,13,11,12,15,20,18,17,16,18,23,25];
+
+
+            // Scale definitions
+            var xScale = d3.scaleBand() // divides output range into discrete bands of equal width and padding
+                            .domain(d3.range(dataset.length)) // d3 has a range() function snap! start, stop, step
+                            .rangeRound([0,w]) // output range rounds each number to nearest integer
+                            .paddingInner(0.05); // 0-1; specifies fraction of range used by blank space. 0-sidebyside
+            
+            var yScale = d3.scaleLinear()
+                            .domain([0, d3.max(dataset)])
+                            .range([0,h])
+
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h)
+
+            // generate bars and encode data in height and colors
+            svg.selectAll("rect")
+                .data(dataset)
+                .enter()
+                .append("rect")
+                .attr("x", function(d,i){
+                    return xScale(i);
+                })
+                .attr("y", function(d){
+                    return h - yScale(d);
+                })
+                .attr("width", function(d,i){
+                    return xScale.bandwidth(); // the width of each band in d3.scaleBand()
+                })
+                .attr("height", function(d){
+                    return yScale(d);
+                })
+                .attr("fill", function(d){
+                    
+                    return "rgb(0,0, " + Math.round(d*10) + ")";
+                })
+                .on("mouseover", function(){
+                    d3.select(this) // on mouseover first use D3 to select same element in DOM
+                        .attr("fill", "orange"); // change the fill color to orange
+                })
+                .on("mouseout", function(d){
+                    d3.select(this)   // on mouseout, first use D3 to select same bar (rect) in DOM
+                    .transition("restoreBarColor")  // named transitions (that operate on diff attributes) dont clash
+                    .duration(250)
+                    .attr("fill", "rgb(0,0,"+(d*10)+")") // restore bar to original color
+                })
+                .on("click", function(){
+                    sortBars();
+                    sortLabels();
+                }); // hover aka mouseover and mouseout effects done with css in style tag in head
+            
+            // value labels
+            svg.selectAll("text")
+                .data(dataset)
+                .enter()
+                .append("text")
+                .style("pointer-events", "none") // set CSS style rule to ignore textbox so pointing goes to bar
+                .text(function(d){
+                    return d; // the actual text between the tags <text>text</text>
+                })
+                .attr("x", function(d,i){
+                    return xScale(i) + xScale.bandwidth()/2; // move near center of bar
+                })
+                .attr("y", function(d){
+                    return h - yScale(d) + 14; // move inside top of bar (topleft is 00)
+                })
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "11px")
+                .attr("fill", "white")
+                .attr("text-anchor", "middle"); // center text horizontally at the assigned x value
+
+            var sortOrder = false; // Boolean to determine if bars are sorted in ascending or descending order
+
+
+            // Define sort bars
+            var sortBars = function(){
+                sortOrder = !sortOrder; // Flip switch, once only here , don't flip in sortLabels()
+                svg.selectAll("rect")  // d3 select all rects in svg tag in DOM, rects selection references
+                    .sort(function(a,b){ // JavaScript's native sort() method.
+                        if (sortOrder) {
+                        return d3.ascending(a,b);} else {
+                            return d3.descending(a,b);}
+                            })
+                    .transition("sortBars")
+                    .delay(function(d,i){
+                        return i*50; // per-element delay
+                    })
+                    .duration(1000)
+                    .ease(d3.easeCircleIn)
+                    .attr("x", function(d,i){
+                        return xScale(i);
+                    });
+            };  
+
+            var sortLabels = function(){
+
+                svg.selectAll("text")
+                    .sort(function(a,b){ // sort the labels based on the data values bound to them in ascending order
+                        if (sortOrder) {
+                        return d3.ascending(a,b);} else {
+                            return d3.descending(a,b);
+                        }
+                    })
+                    .transition("sortLabels")
+                    .delay(function(d,i){
+                        return i*50; // per-element delay
+                    })
+                    .duration(1000)
+                    .ease(d3.easeCircleIn)
+                    .attr("x", function(d,i){
+                        return xScale(i) + xScale.bandwidth()/2;
+                    });
+            };  
+
+        </script>
+    </body>
+
+
+
+
+</html>

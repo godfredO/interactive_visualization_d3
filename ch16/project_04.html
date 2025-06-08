@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head> 
+        <meta charset="utf-8">
+        <title>Project</title>
+        <script type="text/javascript" src="../d3.js"></script>
+        <style type="text/css">
+            h1 {
+				font-family: Helvetica, sans-serif;
+				font-size: 14px;
+				font-weight: bold;
+			}
+
+			.area {
+				stroke: none;
+			}
+
+			.area:hover {
+				fill: yellow;
+			}
+        </style>
+    </head>
+    <body>
+        <h1>Monthly Number of Electric Vehicles Sold in the U.S: Jan 2005 - Feb 2017</h1>
+        <script type="text/javascript">
+
+            // Width and height
+            var w = 1400;
+            var h = 300;
+            var padding = 20;
+
+            var dataset, xScale, yScale, xAxis, yAxis, areat; // Initialize emepty global variables
+
+            // For converting strings to Dates
+            var parseTime = d3.timeParse("%Y-%m");
+
+            // For converting Dates to strings
+            var formatTime = d3.timeFormat("%b %Y");
+
+            var key = function(d) {
+                return d.key;
+            }
+        
+            // Set up stack method, stakced graphs
+            var vehicleStack = d3.stack();   // vehicle names will be the key
+            var typeStack = d3.stack();      // vehicle types will be the key
+
+            // Load in data
+            // Data doesnt have a single header row with column name so use generic d3.request()
+            d3.request("vehicle_sales_data.csv")
+                .mimeType("text/csv") // end up with one long string
+                .get(function(response) { 
+
+                    // Data parsing , split to arrays of strings
+                    var rows = d3.csvParseRows(response.responseText);
+                    // console.log(rows);
+
+                    dataset = [];
+
+                    // Loop once for each row, rows 0-2 contain vehicle info
+                    for (var i=3; i < rows.length; i++){
+
+                        // Create a new object for each record: 
+                        // [{date:date1, MakeModel1:{}, Makemodel2:{},...}, {date:date2, MakeModel1:{}, Makemodel2:{},...}]
+            
+                        dataset[i-3] = {  // if i=3 its the first object in dataset array
+                            date : parseTime(rows[i][0]) // Date object year month
+                        };
+
+                        for (var j = 1; j < rows[i].length; j++){
+                            var make = rows[0][j]; 
+                            var model = rows[1][j];
+                            var makeModel = rows[0][j] + " " + rows[1][j]; // key for stacking eg Tesla ModelS
+
+                            var type = rows[2][j];
+                            var sales = rows[i][j]; // Empty / non-empty string
+
+                            // If sales value exists...
+                            if (sales) {
+                                sales = parseInt(sales); // Convert from string to int    
+                            } else {
+                                sales = 0; //  Update empty string to 0.
+                            }
+
+                            // Append a new object with data for this vehicle and month
+                            dataset[i-3][makeModel] = {
+                                "make" : make,
+                                "model" : model,
+                                "type" : type,
+                                "sales" : sales
+                            };
+
+                        }
+
+                    }
+                    // console.log(dataset)
+
+                // Stacking
+
+                // Object.keys(obj) is Javascript for obj.keys() and slice(1) is [1:] 
+                var keys = Object.keys(dataset[0]).slice(1); // Python dataset[0].keys()[1:]
+                // console.log(keys);
+
+                // Tell stack function where to find the keys
+                vehicleStack.keys(keys)
+                     .value(function value(d, key) { // default is to use d[key] but since thats an object use d[key].sales
+                        return d[key].sales; 
+                     });
+                    
+                // Stack the data and log it out
+                var vehicleSeries = vehicleStack(dataset);
+                console.log(vehicleSeries); 
+
+                
+                //
+                // Type Data Series
+                //
+
+                // The goal here is to make a totally separate dataset that
+                // includes just monthly totals for each 'type' (HEV, PHEV, BEV, FCEV)
+
+                typeDataset = [];
+                
+                for (var i=3; i < rows.length; i++){ 
+
+                    // Create a new object
+                    typeDataset[i-3] = {
+                        date : parseTime(rows[i][0]),
+                        "HEV" : 0,
+                        "PHEV": 0,
+                        "BEV" : 0,
+                        "FCEV" : 0
+                    };
+
+                    // generate type sales for current date
+                    for (var j = 1; j < rows[i].length; j++){ // j=0 is date so skip
+                        // Each car has a type; grab the type and the sale 
+                        // End result is sales figures by type per date
+                        var type = rows[2][j];
+                        var sales = rows[i][j]; 
+
+                        // If sales value exists..
+                        if (sales) {
+                            sales = parseInt(sales);
+                        } else {
+                            sales = 0;
+                        }
+
+                        // Add sales value to existing sum
+                        typeDataset[i-3][type] += sales;
+
+                    }
+                }
+                
+
+                // Stacking
+                typeStack.keys(["HEV", "PHEV", "BEV", "FCEV"]); // no need for value function since d[key]: value
+                var typeSeries = typeStack(typeDataset)
+
+
+                // Create scale functions
+                xScale = d3.scaleTime()
+                            .domain([
+                                d3.min(dataset, function(d){return d.date;}),
+                                d3.max(dataset, function(d){return d.date;})])
+                            .range([padding, w-padding*2]);
+
+                yScale = d3.scaleLinear()
+                            .domain([
+                                0,
+                                d3.max(dataset, function(d){ // this  does mapping of the subobject for us
+                                    var sum = 0; // total sales for each date object
+
+                                    // Loops once for each row, to calculate the total (sum) of sales of all vehicles
+                                    for (var i=0; i < keys.length; i++){ // we use keys to skip 'date' 
+                                        sum += d[keys[i]].sales;
+                                    };
+                                    return sum;
+                                })
+                                ])
+                            .range([h - padding, padding / 2])
+                            .nice();
+                
+                // Define axes
+                xAxis = d3.axisBottom()
+                            .scale(xScale)
+                            .ticks(10)
+                            .tickFormat(formatTime);  
+                
+                // Define Y axis
+                yAxis = d3.axisRight()
+                            .scale(yScale)
+                            .ticks(5);
+                
+                // Define area generator
+                area = d3.area()
+                            .x(function(d) {return xScale(d.data.date)}) // will look for bound stacked data when called
+                            .y0(function(d) {return yScale(d[0]);}) // baseline from stacked data
+                            .y1(function(d) { return yScale(d[1]);}); // topline from stacked data
+                
+                // Create SVG element
+                var svg = d3.select("body")
+                            .append("svg")
+                            .attr("width", w)
+                            .attr("height",h);
+
+                // Create areas for individual vehicles
+                svg.append("g")
+                    .attr("id", "vehicles")
+                    .selectAll("path")
+                    .data(vehicleSeries, key) // key function to use instead of index order
+                    .enter()
+                    .append("path")
+                    .attr("class", "area")
+                    .attr("d", area)
+                    .attr("fill", function(d){
+                        // Which type of vehicle is this?
+                        var thisKey = d.key
+                        // What type of vehicle is this?
+                        var thisType = d[0].data[thisKey].type; // first day, data object in series, current car, type
+                        var color;
+                        switch (thisType){ // could use an ordinal scale instead of switch logic
+                            case "HEV":
+                                color = d3.schemeCategory20[0];
+                                break;
+                            case "PHEV":
+                                color = d3.schemeCategory20[1];
+                                break;
+                            case "BEV":
+                                color = d3.schemeCategory20[2];
+                                break;
+                            case "FCEV":
+                                color = d3.schemeCategory20[3];
+                                break;
+                        }
+                        return color
+                    })
+                    .append("title") // Make tooltip
+                    .text(function(d){
+                        return d.key;
+                    });
+                
+                // Create areas for TYPES, overlay over the individual vehicle areas
+                svg.append("g")
+                    .attr("id", "types")
+                    .selectAll("path")
+                    .data(typeSeries, key) // typeSeries has key of 
+                    .enter()
+                    .append("path")
+                    .attr('class', "area")
+                    .attr("d", area)
+                    .attr("fill", function(d){
+
+                        // Which type is this?
+                        var thisType = d.key; // for the type dataset the types are the keys
+                        var color;
+                        
+                        switch (thisType){ // could use an ordinal scale instead of switch logic
+                            case "HEV":
+                                color = "rgb(110,64,170)";
+                                break;
+                            case "PHEV":
+                                color = "rgb(76,110,219)";
+                                break;
+                            case "BEV":
+                                color = "rgb(35,171,216)";
+                                break;
+                            case "FCEV":
+                                color = "rgb(29,223,163)";
+                                break;
+                        }
+                        return color;
+                    })
+                    .on("click", function(d) {
+
+                        // Which type was clicked?
+                        var thisType = d.key;
+
+                        // Generate a new data set with all-zero values,
+                        // except for this type's data
+                        var thisTypeDataset = [];
+
+                        for (var i=0; i < typeDataset.length; i++){
+                            thisTypeDataset[i] = {
+                                date:   typeDataset[i].date,
+                                HEV :   0, // initialize all types sales on that day to zero
+                                PHEV:   0,
+                                BEV :   0,
+                                FCEV:   0,
+                                [thisType] : typeDataset[i][thisType] // Overwrites appropriate zero value above
+                            }
+                        }
+
+
+                        // Stack the data (even though theres now just one layer)
+                        var thisTypeSeries = typeStack(thisTypeDataset); // stacking will add keys to the stacks
+
+                        var paths = d3.selectAll("#types path") // update the types path elements
+                                        .data(thisTypeSeries, key); // rebind data with key function
+                        
+                        var areaTransitions = paths.transition() // transition the updated types path elements
+                                                    .duration(1000) // transition for 1000 milliseconds
+                                                    .attr("d", area); // transition by redrawing the area function
+                        
+                        // Update scale
+                        yScale.domain([
+                                        0,
+                                        d3.max(thisTypeDataset, function(d){
+                                            var sum = 0; // calculate the total number for each day (for current type)
+
+                                            sum += d[thisType];
+                                            return sum;
+                                        })]); // the selected type's area will fill the y dimension 
+                        
+                        
+                        // Append this transition to the one already in progress
+                        areaTransitions.transition() // this transition replots the area on the updated y scale
+                                        .delay(200) // has the effect of plot going down and coming up
+                                        .on("start", function() {
+
+                                            // Transition axis to new scale concurrently
+                                            d3.select("g.axis.y")
+                                                .transition()
+                                                .duration(1000)
+                                                .call(yAxis);
+                                        
+                                        })
+                                        .duration(1000)
+                                        .attr("d", area);
+                    })
+                    .append("title") // tooltip
+                    .text(function(d) {
+                        return d.key;
+                    })
+                    ;
+
+                
+                // Create axes
+                svg.append("g")
+                    .attr("class", "axis x")
+                    .attr("transform", "translate(0," + (h-padding) + ")") // move down
+                    .call(xAxis);
+                
+                svg.append("g")
+                    .attr("class", "axis y")
+                    .attr("transform", "translate(" + (w-padding*2) + ",0)") // move sideways
+                    .call(yAxis);
+                
+                })
+        </script>
+    </body>
+</html>

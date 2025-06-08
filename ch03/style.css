@@ -1,0 +1,71 @@
+body {
+    font-size:18px;
+    background-color: white;
+    color: black; 
+}
+
+  
+p,
+li {
+    font-size: 16px;
+    line-height: 14px;
+    color: orange;
+}
+
+/* 
+selector1,
+selector2 {
+    property : value;
+}
+*/
+
+/*
+Type selectors - selects specific type, eg h1 = all level 1 headings
+
+Descendant selectors - selects all elements descended from another element eg h1 em = all em contained in h1
+
+Class selectors - selects elements of all types assigned specific class. Class selectors are preceded by period.
+Because elements can have more than one class, you can target elements with multiple classes by stringing classes
+together.
+.caption - selects all elements with class="caption" in opening tag
+.axis - selects all elements with class="axis" i
+.caption .highlight - selects all elements with class="caption highlight"
+.axix .x - selects all elements with class="axis x" 
+
+ID selectors - selects element of specified ID (IDs can be used in the DOM only once). ID selctors start
+with a hash mark
+
+#header - selects the element with ID header
+
+Selectors can be combined.
+
+h1 .caption - selects all h1's with class="caption"
+#button .on - selects element with ID button but only if it also has class="on"
+
+Because the DOM is dynamic, you might have classes and IDs can be added or removed, so CSS rules can sometimes
+only apply in certain scenarios
+*/
+
+#content #button {
+    font-weight: bold;
+
+}
+
+/*
+
+for (initialization of iterator ; test of iterator ; update of iterator) {
+
+}
+
+*/
+
+svg .pumpkin{
+    fill:rgba(235, 235, 0, 0.1);
+    stroke:orange; 
+    stroke-width:15;
+
+}
+
+svg .see-through {
+    opacity: 0.5;
+}

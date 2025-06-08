@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script type="text/javascript" src="../d3.js"></script>
+        <title>Updates</title>
+    </head>
+    <body>
+        
+        <p id="add">Add a new data value</p>
+        <p id="remove">Remove a data value</p>
+        <!---->
+        <script type="text/javascript">
+            var w = 600;
+            var h = 250;
+
+            var dataset = [ { key: 0, value: 5 },		//dataset is now an array of objects.
+							{ key: 1, value: 10 },		//Each object has a 'key' and a 'value'.
+							{ key: 2, value: 13 }, 
+							{ key: 3, value: 19 },
+							{ key: 4, value: 21 },
+							{ key: 5, value: 25 },
+							{ key: 6, value: 22 },
+							{ key: 7, value: 18 },
+							{ key: 8, value: 15 },
+							{ key: 9, value: 13 },
+							{ key: 10, value: 11 },
+							{ key: 11, value: 12 },
+							{ key: 12, value: 15 },
+							{ key: 13, value: 20 },
+							{ key: 14, value: 18 },
+							{ key: 15, value: 17 },
+							{ key: 16, value: 16 },
+							{ key: 17, value: 18 },
+							{ key: 18, value: 23 },
+							{ key: 19, value: 25 } ];
+
+            
+
+
+            // Scale definitions
+            var xScale = d3.scaleBand() // divides output range into discrete bands of equal width and padding
+                            .domain(d3.range(dataset.length)) // d3 has a range() function snap! start, stop, step
+                            .range([0,w]) // use rangeRound() to round to nearest integer pixel for antialiasing
+                            .paddingInner(0.05); // 0-1; specifies fraction of range used by blank space. 0-sidebyside
+            
+            var yScale = d3.scaleLinear()
+                            .domain([0, d3.max(dataset, function(d){return d.value})]) // d is an object
+                            .range([0,h]);
+            
+            // Define key function, to be used when binding data
+            var key = function(d) {
+                    return d.key;};
+
+            var maxValue = d3.max(dataset, key);
+
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h);
+            
+
+            //
+			// Log selections, so we can inspect them closely
+			//
+			// * Uncomment these one at a time, and explore
+			//   the results in the console! *
+			//
+
+			// console.log('svg.selectAll("rect")');
+			// console.log(svg.selectAll("rect"));
+
+			// console.log('svg.selectAll("rect").data(dataset, key)');
+			// console.log(svg.selectAll("rect").data(dataset, key));
+
+			// console.log('svg.selectAll("rect").data(dataset, key).enter()');
+			// console.log(svg.selectAll("rect").data(dataset, key).enter());
+
+            // console.log('svg.selectAll("rect").data(dataset, key).exit()');
+			// console.log(svg.selectAll("rect").data(dataset, key).exit());
+
+
+			// console.log('svg.selectAll("rect").data(dataset, key).enter().append("rect")');
+			// console.log(svg.selectAll("rect").data(dataset, key).enter().append("rect"));
+
+
+            // generate bars and encode data in height and colors
+            svg.selectAll("rect")
+                .data(dataset, key)  // key values for data binding
+                .enter()
+                .append("rect")
+                .attr("x", function(d,i){
+                    return xScale(i);
+                })
+                .attr("y", function(d){
+                    return h - yScale(d.value);
+                })
+                .attr("width", xScale.bandwidth())
+                .attr("height", function(d){
+                    return yScale(d.value);
+                })
+                .attr("fill", function(d){
+                    
+                    return "rgb(0,0, " + Math.round(d.value*10) + ")";
+                });
+            
+            // value labels
+            svg.selectAll("text")
+                .data(dataset, key) // pass key function to use key values instead of index order
+                .enter()
+                .append("text")
+                .text(function(d){
+                    return d.value; // the actual text between the tags <text>text</text>
+                })
+                .attr("x", function(d,i){
+                    return xScale(i) + xScale.bandwidth()/2; // move near center of bar
+                })
+                .attr("y", function(d){
+                            if (d.value > 0.1 * maxValue){
+                            return h - yScale(d.value) + 14} else{
+                                return h - yScale(d.value) - 1
+                            }
+                            })
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "11px")
+                .attr("fill", function(d){
+                                if (d.value > 0.1 * maxValue) {
+                                    return "white";
+                                } else {
+                                    return "black";
+                                }
+                            })
+                .attr("text-anchor", "middle"); // center text horizontally at the assigned x value
+                
+
+            // Update Code
+            d3.selectAll("p")
+                .on("click", function(){
+
+                    // See which p was clicked p#remove returns 'remove' or p#add returns add'
+                    var paragraphID = d3.select(this).attr('id');
+
+                    // Decide what to do next
+                    if (paragraphID == 'add'){
+                        // Add a data value
+
+                        var newNumber = Math.floor(Math.random()*maxValue) ;
+                        var lastKeyValue; 
+                        if (dataset.length){ lastKeyValue = dataset[dataset.length - 1].key;}else{
+                                lastKeyValue = 0
+                        } // last object's key (0-indexed)
+                        dataset.push({
+                            key : lastKeyValue + 1,
+                            value : newNumber
+                        });
+                    } else {
+                        // Remove a value
+                        dataset.pop();
+                    }
+
+                
+                    // Update the scale domain
+                    xScale.domain(d3.range(dataset.length)); // recalibrate x scale by updating domain
+                    yScale.domain([0, d3.max(dataset, function(d){return d.value})]); // recalibrate y scale
+
+                    // console.log('svg.selectAll("rect")');
+					// console.log(svg.selectAll("rect"));
+
+					// console.log('svg.selectAll("rect").data(dataset, key)'); // update selection
+					// console.log(svg.selectAll("rect").data(dataset, key));
+
+                    // Select 
+                    var bars = svg.selectAll("rect")
+                                    .data(dataset, key) // selection with references to
+                    
+                    // console.log('bars.enter()');
+					// console.log(bars.enter());
+
+					// console.log('bars.enter().append("rect")');
+					// console.log(bars.enter().append("rect"));
+
+					// console.log('bars.enter().append("rect").merge(bars)');
+					// console.log(bars.enter().append("rect").merge(bars));
+
+                    bars.enter()   // get references to enter selections (placeholders, subset of update selections)
+                        .append("rect") // append rectangle to the placeholder selections
+                        .attr("x", w)
+                        .attr("y", function(d){ // d is current object
+                            return h - yScale(d.value)})
+                        .merge(bars) // Merge the enter selection with remaining bars, into current selection
+                        .transition()   // interpolate the changes below
+                        .duration(500)  // let interpolation stretch out for 500 milliseconds
+                        .attr("x", function(d,i) {  // x of current selection (enter plus preexisting)
+                            return xScale(i);
+                        })
+                        .attr("y", function(d){ // y of current selection (enter plus preexisting)
+                            return h - yScale(d.value);
+                        })
+                        .attr("width", xScale.bandwidth())
+                        .attr("height", function(d) {
+                            return yScale(d.value); // replot all bars because changed sa
+                        })
+                        .attr("fill", function(d){
+                            return "rgb(0,0, " + Math.round(d.value*10) + ")";
+                        });
+                         
+
+                    // labels
+                    labels = svg.selectAll("text")
+                                .data(dataset, key)      // update selection using key function
+
+                    labels.enter()                  // enter selection , placeholders
+                            .append("text")         // append text elements for new enter selection
+                            .attr("x", w)
+                            .attr("y", function(d){
+                            if (d.value > 0.1 * maxValue){
+                            return h - yScale(d.value) + 14} else{
+                                return h - yScale(d.value) - 1
+                            }
+                             })
+                            .attr("font-family", "sans-serif")
+                            .attr("font-size", "11px")
+                            .attr("text-anchor", "middle")
+                            .merge(labels)          // merge current selection and enter selection
+                            .transition()
+                            .duration(500)
+                            .text(function(d){
+                            return d.value;
+                            })
+                            
+                            .attr("x", function(d,i){
+                                return xScale(i) + xScale.bandwidth()/2;
+                            })
+                            .attr("y", function(d){
+                            if (d.value > 0.1 * maxValue){
+                            return h - yScale(d.value) + 14} else{
+                                return h - yScale(d.value) - 1
+                            }
+                            })
+                            .attr("fill", function(d){
+                                if (d.value > 0.1 * maxValue) {
+                                    return "white";
+                                } else {
+                                    return "black";
+                                }
+                            });
+                        
+
+                        // console.log('bars.exit()');
+					    // console.log(bars.exit());
+
+					    console.log('bars.exit().remove()');
+					    console.log(bars.exit().remove());
+
+                        // Exit selections bars
+                        bars.exit() // grab references to exit selection
+                            .transition()
+                            .duration(500)
+                            .attr("x", -xScale.bandwidth()) // Exit stage left
+                            .remove(); // remove rom DOM
+                        
+                        // Exit selections text
+                        labels.exit()
+                                .transition()
+                                .duration(500)
+                                .attr("x", -xScale.bandwidth()) // Exit stage left
+                                .remove(); // then remove from DOM
+                        
+                        });
+                    
+    
+        </script>
+        
+    </body>
+
+
+
+
+</html>

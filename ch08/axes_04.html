@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>scales_01</title>
+        <script type="text/javascript" src="../d3.js"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+        var w = 500;
+        var h = 300;
+        var padding = 20;
+
+        var dataset, xScale, yScale, xAxis, yAxis ; // Empty global variables
+
+        // Named function for converting strings to dates, like  strptime()
+        var parseTime = d3.timeParse("%m/%d/%y"); // initialize with expected date format
+
+        // Named function for converting dates to strings, like strftime()
+        var formatTime = d3.timeFormat("%e"); // initialize with expected date format
+
+
+        // rowConverter
+        var rowConverter = function(d){
+            return {
+                Date : parseTime(d.Date), // named function above which uses d3.timeParse()
+                Amount : parseInt(d.Amount) // in-built function, convert amount to integer from string
+
+            }};
+
+        
+        // Load in the data
+        d3.csv("../ch07/time_scale_data.csv", rowConverter, function(data){ 
+            
+            // Assign read and converted data to dataset global variable
+            dataset = data;             // data read as list of dicts of Date,Amount keys
+
+            // Discover start and end dates in dataset
+            var startDate = d3.min(dataset, function(d){return d.Date;})
+            var endDate = d3.max(dataset, function(d){return d.Date;})
+
+            // Use the read data to create scale function domain via d3.min() and d3.max()
+            xScale = d3.scaleTime()
+                        .domain([
+                        d3.timeDay.offset(startDate, -1),   // startDate minus 1 for padding
+                        d3.timeDay.offset(endDate, 1)       // endDate plus 1 for padding
+                        ])     
+                        .range([padding, w-padding]); // pixel range
+            
+            yScale = d3.scaleLinear()
+                        .domain([
+                        0,              // 0 baseline
+                        d3.max(dataset, function(d){return d.Amount;})])
+                        .range([h-padding, padding]); // invert since y 0 is top left not bottom left
+            
+            
+            // Create svg element
+            var svg = d3.select("body")
+                        .append("svg")
+                        .attr("width", w)
+                        .attr("height", h);
+            
+            // Define guide lines
+            svg.selectAll('line')
+                .data(dataset)
+                .enter()
+                .append("line")
+                .attr("x1", function(d){
+                    return xScale(d.Date);
+                })
+                .attr("x2", function(d){
+                    return xScale(d.Date);
+                })
+                .attr("y1", h-padding)
+                .attr("y2", function(d){
+                    return yScale(d.Amount);
+                })
+                .attr("stroke", "#ddd")
+                .attr("stroke-width", 1);
+
+
+            // Generate circles last, so they appear in front
+            svg.selectAll("circle")
+                .data(dataset)
+                .enter()
+                .append("circle")
+                .attr("cx", function(d){
+                    return xScale(d.Date);
+                })
+                .attr("cy", function(d){
+                    return yScale(d.Amount);
+                })
+                .attr("r", 2);
+            
+            // Define axes and add to translated group element
+            xAxis = d3.axisBottom().scale(xScale).ticks(9).tickFormat(formatTime);
+
+            yAxis = d3.axisLeft().scale(yScale).ticks(10);
+
+            svg.append("g")
+                .attr("class", "axis") // assign axis class
+                .attr("transform", "translate(0," + (h-padding)+")") // transform=translate(0,h-padding)
+                .call(xAxis); 
+
+            svg.append("g")  // start with group element
+                .attr("class", "axis") // assign axis class
+                .attr("transform", "translate(" + padding + "," + "0)") // translate to (0, padding)
+                .call(yAxis);
+        })
+        
+        
+        
+
+        </script>
+    
+    </body>
+
+</html>
