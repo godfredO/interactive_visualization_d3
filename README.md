@@ -1,1 +1,2 @@
-# interactive_visualization_d3
+Code for Interactive Data Visualization for the Web, Second Edition by Scott Murray
+
